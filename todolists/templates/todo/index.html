@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+
+{% block title %}To-do{% endblock %}
+
+{% block extra_style %}
+<style>
+    #app{
+        position: relative;
+    }
+
+    .addBtn{
+        margin: 2px;
+        position: absolute;
+        right:0;
+    }
+
+    .todolist{
+        margin-top: 2em;
+    }
+    
+    .todo{
+        margin: 3px;
+    }
+
+    .removeBtn{
+        float:right;
+    }
+
+    .updateBtn{
+        float: right;
+        margin: 0 10px;
+    }
+    .importanceCheck{
+        float: right;
+    }
+    .important{
+        background-color: pink;
+    }
+    .important:hover{
+        background-color: yellow;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="app">
+    <br>
+    <h1>TODO List</h1>
+    <br>
+
+    <!-- title -->
+    <div class="input-group mb-3">
+        <div class="input-group-prepend">
+            <span class="input-group-text" id="inputGroup-sizing-default">제목</span>
+        </div>
+        <input type="text" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" v-model.trim='title'>
+    </div>
+
+    <!-- content -->
+    <div class="input-group mb-3">
+        <div class="input-group-prepend">
+            <span class="input-group-text" id="inputGroup-sizing-default">내용</span>
+        </div>
+        <input type="text" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" v-model.trim='content' v-on:keyup.enter="add_todo()">
+    </div>    
+
+    <!-- deadline -->
+    <div class="deadline input-group mb-3">
+        <div class="input-group-prepend">
+            <label class="input-group-text" for="inputGroupSelect01">마감기한</label>
+        </div>
+        <select class="custom-select" id="inputGroupSelect01" v-model='deadline'>
+            <option selected value="">없음</option>
+            <option value="1">1일</option>
+            <option value="2">2일</option>
+            <option value="3">3일</option>
+            <option value="4">4일</option>
+            <option value="5">5일</option>
+        </select>
+    </div>
+
+    <!-- importance check -->
+    <div class="importanceCheck input-group mb-3">
+        <div class="input-group-prepend">
+            <div class="input-group-text">
+            <span>중요? &nbsp;&nbsp;</span>
+            <input type="checkbox" aria-label="Checkbox for following text input" v-model='importance'>
+            </div>
+        </div>
+    </div>
+          
+    <!-- submit button -->
+    <button class="btn btn-outline-success addBtn" v-on:click="add_todo()">ADD</button>
+    <br>
+
+    <!-- to-do lists (important) -->
+    <div class="todolist">
+        <div class="todo list-group" v-for='(todo, index) in todolist' v-if="todo.importance == 1">
+            <div class="important list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">[[todo.title]]</h5>
+                    <small v-if='todo.deadline != 0'>D-[[todo.deadline]]</small>
+                </div>  
+                <p class="mb-1">[[todo.content]]</p>
+                <input class='isFinished' type="checkbox" aria-label="Checkbox for following text input" v-on:click='checked(todo, index)'>
+                <span class="removeBtn btn btn-outline-danger" v-on:click='remove_todo(todo, index)'>DELETE</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- to-do lists (normal) -->
+    <div class="todolist">
+        <div class="todo list-group" v-for='(todo, index) in todolist' v-if="todo.importance == 0">
+            <div class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">[[todo.title]]</h5>
+                    <small v-if='todo.deadline != 0'>D-[[todo.deadline]]</small>
+                </div>  
+                <p class="mb-1">[[todo.content]]</p>
+                <input class='isFinished' type="checkbox" aria-label="Checkbox for following text input" v-on:click='checked(todo, index)'>
+                <span class="removeBtn btn btn-outline-danger" v-on:click='remove_todo(todo, index)'>DELETE</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_script %}
+
+<script src="https://cdn.jsdelivr.net/npm/vue"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+<script>
+    axios.defaults.xsrfCookieName = 'csrftoken';
+    axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+    var vm = new Vue({
+        delimiters: ['[[', ']]'],
+        el: '#app',
+        data: {
+            title: "",
+            content: "",
+            deadline: "",
+            importance: true,
+            todolist: [],
+        },
+        created: function(){
+            console.log('created func');
+            this.fetch_all_todo();
+        },
+        methods: {
+            checked: function(todo, index){
+                var complete = '[완료] '
+                if(event.target.checked){
+                    console.log('checked func');
+                    todo.title = complete + todo.title;
+                }else{
+                    console.log('unchecked func');
+                    todo.title = todo.title.replace(complete,"");
+                }
+            },
+            fetch_all_todo: function(){
+                console.log('fetch_all_todo');
+
+                var vm = this;
+                axios.get('api/todo/list')
+                    .then(function(res){
+                        console.log('GET RESPONSE', res);
+                        vm.todolist = res.data;
+                    })
+                    .catch(function(err){
+                        console.log('GET ERROR', err);
+                    });
+            },
+            add_todo: function(){
+                console.log('add func');
+                if(this.title == '')    this.title = 'Empty title';
+                if(this.content == '' ) this.content = 'Empty content';
+                if(this.deadline == '') this.deadline = 0;
+                if(this.importance == true) this.importance = 1;
+                else                        this.importance = 0;
+                
+                var vm = this;
+                var postData = {title: this.title, content: this.content, deadline: this.deadline, importance : this.importance};
+                axios.post('/api/todo/create/', postData)
+                    .then(function(res){
+                        console.log("POST RESPONSE", res);
+                        vm.todolist.push({id: res.data.id, title: res.data.title, content: res.data.content, deadline: res.data.deadline, importance: res.data.importance});
+                    })
+                    .catch(function(err){
+                        console.log("POST ERROR", err);
+                    });
+
+                this.title = '';
+                this.content = '';
+                this.deadline = '';
+            },
+            remove_todo: function(todo, index){
+                console.log('remove func');
+                
+                var vm = this;
+                axios.delete('/api/todo/'+todo.id+'/delete/')
+                    .then(function(res){
+                        console.log("DELETE RESPONSE", res);
+                        vm.todolist.splice(index,1);
+                    })
+                    .catch(function(err){
+                        console.log("DELETE ERR", err);
+                    })
+            }
+        }
+    });
+</script>
+{% endblock %}
