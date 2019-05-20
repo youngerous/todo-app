@@ -2,15 +2,15 @@
 
 ----
 ## What should be installed
-1. virtual environment (python -m venv venv)
-2. django (pip install django)
+0. virtual environment (python -m venv venv)
+1. django (pip install django)
 
 
 ----
 ## Build Process
-1. Run virtual environment (source venv/Scripts/activate)
-2. Move to django-project folder (cd backend)
-3. Run server (python manage.py runserver)
+0. Run your own virtual environment (source venv/Scripts/activate)
+1. Move to django-project folder (cd todo-app/backend)
+2. Run server (python manage.py runserver)
 
 ----
 ## Deploy URL
